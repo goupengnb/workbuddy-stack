@@ -1,0 +1,72 @@
+# 手动构建两套容器镜像（不依赖 Release 流程）。
+#
+# 用途：改了 upstream/ 或 server/ 后，想立刻拿到可部署的镜像，又不想走完整的
+# 发版打包（Release 会额外做 Windows 安装器、draft 等动作）。
+#
+# 产物：
+#   ghcr.io/<owner>/workbuddy2api:<version>
+#   ghcr.io/<owner>/workbuddy-manager:<version>
+#   两个都带 latest 标签，平台 linux/amd64 + linux/arm64。
+#
+# 首次推送后到仓库 Packages 页把两个包设为 public，否则匿名 docker pull 会 401。
+name: Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "镜像版本号（不带 v）"
+        required: true
+        default: "2.11.9"
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: build ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: workbuddy2api
+            context: upstream
+            dockerfile: upstream/Dockerfile
+          - name: workbuddy-manager
+            context: .
+            dockerfile: Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 解析镜像名
+        id: img
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${{ matrix.name }}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 构建并推送
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: false
+          tags: |
+            ${{ steps.img.outputs.name }}:${{ inputs.version }}
+            ${{ steps.img.outputs.name }}:latest
+
+      - name: 记录 digest
+        run: |
+          echo "${{ steps.img.outputs.name }}@${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
