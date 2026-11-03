@@ -234,19 +234,31 @@ export async function copyText(text: string): Promise<boolean> {
   ta.style.top = '0';
   ta.style.left = '-9999px';
   ta.style.opacity = '0';
-  document.body.appendChild(ta);
+
+  // 挂到当前打开的对话框里，而不是 document.body。
+  //
+  // 原因：对话框在关闭时会把自己整棵子树移除（`container.remove()`），如果
+  // textarea 挂在 body 上、而复制动作发生在对话框卸载的同一帧，选区会先失效，
+  // `execCommand('copy')` 返回 false —— 表现就是「提示复制成功、剪贴板是空的」。
+  // 挂进对话框后，textarea 与触发复制的节点同生共死，选区不会被提前摘掉。
+  const dialog = document.activeElement?.closest('[role=dialog]')
+    || document.querySelector('[role=dialog]');
+  const host = dialog || document.body;
+  host.appendChild(ta);
 
   const sel = document.getSelection();
   const saved = sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
   let ok = false;
   try {
+    // 先 focus：Safari 与部分 Edge 版本要求 textarea 是当前焦点才认 select()。
+    ta.focus();
     ta.select();
     ta.setSelectionRange(0, text.length);
     ok = document.execCommand('copy') === true;
   } catch {
     ok = false;
   } finally {
-    document.body.removeChild(ta);
+    ta.remove();
     // 恢复用户原来的选区：复制是旁路动作，不该把界面上已有的选择弄丢
     if (saved && sel) {
       sel.removeAllRanges();
