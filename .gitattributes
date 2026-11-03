@@ -12,6 +12,15 @@
 # 里就是 LF-only 的 .cmd。
 *.cmd text eol=crlf
 
+# 脚本、源码、编排文件一律 LF：容器与 CI 都按 LF 执行，
+# Windows 检出成 CRLF 会让 sh 脚本在容器里报 "not found"。
+*.sh text eol=lf
+*.py text eol=lf
+*.go text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+
 # Patch context contains significant whitespace and CRLF from the bundled
 # upstream snapshot. Check patch applicability instead of treating its context
 # markers as trailing whitespace in ordinary source code.

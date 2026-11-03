@@ -1,0 +1,63 @@
+# WorkBuddy Stack —— 一体化部署（manager + workbuddy2api）
+#
+# 用法：
+#   cp .env.stack.example .env
+#   mkdir -p workbuddy2api/auths workbuddy2api/data workbuddy-manager/data
+#   cp ../../upstream/config.example.json workbuddy2api/config.json   # 首次
+#   docker compose up -d
+#
+# 镜像由本仓库的 Release 工作流构建（ghcr.io/<owner>/workbuddy2api 与
+# ghcr.io/<owner>/workbuddy-manager）。也可以把 WB_IMAGE_REGISTRY 指回
+# ghcr.io/ithtelab 使用上游发行镜像。
+
+name: workbuddy
+
+services:
+  workbuddy2api:
+    image: ${WB_IMAGE_REGISTRY:-ghcr.io/goupengnb}/workbuddy2api:${WB_VERSION:-2.11.9}
+    container_name: workbuddy2api
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - ./workbuddy2api/auths:/app/auths
+      - ./workbuddy2api/data:/app/data
+      - ./workbuddy2api/config.json:/app/config.json:ro
+    networks:
+      - wbnet
+
+  workbuddy-manager:
+    image: ${WB_IMAGE_REGISTRY:-ghcr.io/goupengnb}/workbuddy-manager:${WB_VERSION:-2.11.9}
+    container_name: workbuddy-manager
+    restart: unless-stopped
+    depends_on:
+      - workbuddy2api
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      WB2API_BASE: http://workbuddy2api:7863
+      WB2API_MODE: docker
+      WB2API_CONTAINER: workbuddy2api
+      # 首次启动留空会在日志里打印随机口令；生产写死在这里。
+      WB_ADMIN_PASSWORD: ${WB_ADMIN_PASSWORD:-}
+      WB_SECURE_COOKIE: ${WB_SECURE_COOKIE:-auto}
+      WB_TRUST_PROXY: "1"
+      WB_TRUSTED_PROXY_CIDRS: ${WB_TRUSTED_PROXY_CIDRS:-127.0.0.0/8,::1/128,172.16.0.0/12}
+      WB_ENABLE_DOCS: "0"
+      WB_SESSION_DAYS: ${WB_SESSION_DAYS:-7}
+      WB_SESSION_IDLE_HOURS: ${WB_SESSION_IDLE_HOURS:-24}
+      WB_GITHUB_MIRROR: ${WB_GITHUB_MIRROR:-}
+      WB_HTTP_PROXY: ${WB_HTTP_PROXY:-}
+      WB_DEFAULT_ACCOUNT_PROXY: ${WB_DEFAULT_ACCOUNT_PROXY:-}
+    ports:
+      # 默认对公网监听；只给内网就把 WB_MANAGER_BIND 改成 127.0.0.1。
+      - "${WB_MANAGER_BIND:-0.0.0.0}:${WB_MANAGER_PORT:-8888}:7864"
+    volumes:
+      - ./workbuddy-manager/data:/app/data
+      # 面板读上游 config.json 里的 api_key，并提供账号跳转。
+      - ./workbuddy2api:/opt/workbuddy2api
+    networks:
+      - wbnet
+
+networks:
+  wbnet:
+    driver: bridge

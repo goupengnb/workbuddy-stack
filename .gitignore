@@ -9,6 +9,8 @@ venv/
 # 敏感数据与运行时数据
 data/
 .devdata/
+auths/
+deploy/stack/backups/
 .env
 .env.local
 *.db
@@ -129,11 +131,13 @@ dev/.shots-new-controls
 server/tests/_dt_tmp/
 
 # ── 本机部署产物（严禁提交：含账号授权凭据与体积庞大的工具链）─────
-# upstream/ 内有 auths/（真实 CodeBuddy 账号授权）与 config.json（含 api_key）；
+# 本分支把上游 Go 源码放在 /upstream/ 随仓库维护，因此不再忽略整个目录；
+# 只忽略运行时凭据（上游自己的 .gitignore 也覆盖了这些，这里再加一道保险）。
+/upstream/auths/
+/upstream/data/
+/upstream/config.json
+/upstream/.apikey
 # .tools/ 是本地 Go 工具链（数百 MB）；local-ops/ 是单机启停脚本。
-# 只锚定**仓库根目录**那份上游源码；不锚定的话这条会连带吞掉任何同名子目录
-# （web/app/(main)/settings/upstream/ 就这么丢过 —— 文件提交不进去，本地测试照样绿）。
-/upstream/
 .tools/
 local-ops/
 LOCAL_DEPLOY_NOTES.md

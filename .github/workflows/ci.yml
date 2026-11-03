@@ -1,0 +1,47 @@
+# 每次推到 main / PR：编译并测试上游 Go 服务，语法检查管理端 Python。
+# 镜像构建在 release.yml（打 v* tag 或手动触发）里做，避免日常提交烧构建额度。
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upstream:
+    name: upstream (go)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: upstream
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: upstream/go.mod
+          cache-dependency-path: upstream/go.sum
+      - name: go vet
+        run: go vet ./...
+      - name: go test
+        run: go test ./... -count=1
+      - name: 交叉编译 arm64
+        env:
+          CGO_ENABLED: "0"
+          GOOS: linux
+          GOARCH: arm64
+        run: go build -trimpath -ldflags="-s -w" -o /tmp/wb2api-arm64 ./cmd/server
+
+  manager:
+    name: manager (python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: 语法检查
+        run: python -m compileall -q server

@@ -1,3 +1,17 @@
+> **本仓库 = 个人维护分支（workbuddy-stack）**
+>
+> 基于 [`ithtelab/workbuddy-manager`](https://github.com/ithtelab/workbuddy-manager) v2.11.9，
+> 额外维护：
+>
+> - `upstream/`：workbuddy2api（Go）源码，含出站身份修正（chat 去掉
+>   `X-Machine-ID` / `X-Session-ID`，`X-Product` 回 `SaaS`，补 Agent 三件套与
+>   `X-Private-Data`）；
+> - `deploy/stack/`：管理端 + 上游的一体化 compose，附备份 / 升级脚本；
+> - `.github/workflows/`：Go 测试 CI，以及打 tag 自动构建 amd64 + arm64 镜像到 GHCR。
+>
+> 维护流程见 [docs/MAINTAINING.md](docs/MAINTAINING.md)，出站头与风险面见
+> [docs/ANTI-RISK.md](docs/ANTI-RISK.md)。
+
 <div align="center">
 
 # WorkBuddy Manager

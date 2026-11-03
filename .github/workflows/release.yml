@@ -144,7 +144,14 @@ jobs:
           # `.upstream-id` 时必须让发布失败，不能发出一个用户无法更新上游的包。
           UPSTREAM_SRC_URL="${UPSTREAM_SRC_URL:-https://github.com/${{ github.repository }}/releases/download/upstream-src/workbuddy2api-src.tar.gz}"
           mkdir -p "$STAGE/upstream"
-          if curl -fsSL --retry 3 --retry-delay 2 --max-time 120 \
+          if [ -f upstream/docker-compose.yml ] && [ -s upstream/.upstream-id ]; then
+            # 本分支把上游源码直接放在 upstream/ 随仓库维护（原始公开仓库已下线，
+            # 不再依赖 upstream-src 这个独立 Release 资产）。仓库内源码是唯一事实来源，
+            # 与下面的补丁校验/镜像构建用的是同一份代码，不存在版本漂移。
+            cp -a upstream/. "$STAGE/upstream/"
+            echo "已内嵌仓库内上游源码：$(find "$STAGE/upstream" -type f | wc -l) 个文件"
+            echo "has_upstream=1" >> $GITHUB_OUTPUT
+          elif curl -fsSL --retry 3 --retry-delay 2 --max-time 120 \
                  "$UPSTREAM_SRC_URL" -o /tmp/upstream-src.tar.gz \
              && tar -xzf /tmp/upstream-src.tar.gz -C "$STAGE/upstream" --strip-components=1 \
              && [ -f "$STAGE/upstream/docker-compose.yml" ]; then
