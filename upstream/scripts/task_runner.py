@@ -197,9 +197,9 @@ def desktop_fingerprint(auth):
         "username": auth.get("nick", ""), "userNickname": auth.get("nick", ""),
         "product": "SaaS", "releaseDate": 1789036585355,
         "commit": "5f9692923c93033111c51ad7b003eb80204a9b75",
-        "ideName": "WorkBuddy", "ideType": "WorkBuddy", "ideVersion": "5.5.6",
+        "ideName": "WorkBuddy", "ideType": "WorkBuddy", "ideVersion": "5.9.3",
         "machineId": derive_id(auth, "machine"), "sessionId": derive_id(auth, "session"),
-        "extName": "workbuddy-desktop", "extVersion": "5.5.6",
+        "extName": "workbuddy-desktop", "extVersion": "5.9.3",
         "os": "win32", "arch": "x64", "osVersion": "10.0.26220",
         "cpuCores": 20, "memorySize": 24,
         "timestamp": now, "presentAt": now,
@@ -299,7 +299,7 @@ MARKET_LIST_PATH = "/v2/operation-platform/market/expert/list"
 WEB_BASE = "https://www.workbuddy.cn"
 
 # fork 桌面指纹（desktop.go）/ web 域（report.go）吸收常量
-DESKTOP_UA = "WorkBuddy/5.5.6 WorkBuddy/5.5.6 CLI/2.137.1"
+DESKTOP_UA = "WorkBuddy/5.9.3 WorkBuddy/5.9.3 CLI/2.165.0"
 WEB_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
           "(KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36")
 # Library_read 空间文档 URL（fork autotask.go:438 实测三账号点亮）
@@ -631,7 +631,7 @@ def _lighthouse_real_chat(auth, expert_id):
         "X-User-Id": auth["uid"], "X-Conversation-ID": conv,
         "X-Request-ID": str(now_ns), "X-Agent-Intent": "craft",
         "X-Agent-Type": "main", "X-IDE-Name": "WorkBuddy",
-        "X-IDE-Type": "WorkBuddy", "X-IDE-Version": "5.5.6",
+        "X-IDE-Type": "WorkBuddy", "X-IDE-Version": "5.9.3",
         "x-codebuddy-request": "1", "X-Expert-Id": expert_id,
     })
     req = urllib.request.Request(

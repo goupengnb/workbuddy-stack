@@ -835,8 +835,14 @@ func New() *Client {
 		ChatHTTP:             &http.Client{Timeout: 0, Transport: tr}, // 无总时长；首字节由 ResponseHeaderTimeout 管
 		SanitizeFingerprints: true,
 		GzipBody:             true,
-		ChatBaseCN:           "https://copilot.tencent.com",
-		BillingBaseCN:        "https://www.codebuddy.cn",
+		// 官方桌面端 product.json 的主入口是 www.workbuddy.cn；copilot.tencent.com
+		// 只是 NetworkFailover 里的备选。5.9.3 真机 chat 全部打前者的同域接口，
+		// 且 X-Domain 与 chat host 始终一致——网关若 chat 打 copilot 却声明
+		// workbuddy.cn，这个不一致本身就可被判定。
+		// 两域都跟随真机：chat 与 billing 同属 www.workbuddy.cn。
+		// （旧默认 billing 打 codebuddy.cn，混合域名本身是可判别特征。）
+		ChatBaseCN:           "https://www.workbuddy.cn",
+		BillingBaseCN:        "https://www.workbuddy.cn",
 	}
 }
 

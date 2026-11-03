@@ -83,8 +83,9 @@ func TestGlobalChatUsesV2PathAndBase(t *testing.T) {
 	if len(calls) != 1 {
 		t.Errorf("global chat calls=%v want exactly 1 outbound request (/v2 single path)", calls)
 	}
-	if gotOrigin != "https://www.workbuddy.ai" {
-		t.Errorf("global chat Origin=%q want https://www.workbuddy.ai", gotOrigin)
+	// 5.9.3 真机：桌面端 chat 不发 Origin / Referer（node fetch 无同源语义）。
+	if gotOrigin != "" {
+		t.Errorf("global chat Origin=%q want empty (桌面端 chat 不发)", gotOrigin)
 	}
 	if gotModel != "gpt-5.4" {
 		t.Errorf("model=%q", gotModel)

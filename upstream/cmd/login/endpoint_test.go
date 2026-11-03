@@ -6,8 +6,9 @@ import (
 )
 
 // TestRealmConfig 按 realm 映射上游 base 与 Origin/Referer origin：
-// global → www.workbuddy.ai（base 与 origin 同域）；cn → copilot.tencent.com + codebuddy.cn。
-// 非法/缺省 realm 回落 cn。这是「端点按 realm 动态切换」的映射层，生产值即此处常量。
+// global → www.workbuddy.ai；cn → www.workbuddy.cn（两者 base 与 origin 同域）。
+// 5.9.3 真机：桌面端 CN 全量请求都打 workbuddy.cn，codebuddy.cn 只是 billing
+// 的旧 API 主机名，从不当 Origin。非法/缺省 realm 回落 cn。
 func TestRealmConfig(t *testing.T) {
 	cases := []struct {
 		name       string
@@ -16,8 +17,8 @@ func TestRealmConfig(t *testing.T) {
 		wantOrigin string
 	}{
 		{name: "global", realm: realmGlobal, wantBase: "https://www.workbuddy.ai", wantOrigin: "https://www.workbuddy.ai"},
-		{name: "cn", realm: realmCN, wantBase: "https://copilot.tencent.com", wantOrigin: "https://www.codebuddy.cn"},
-		{name: "非法回落 cn", realm: "foo", wantBase: "https://copilot.tencent.com", wantOrigin: "https://www.codebuddy.cn"},
+		{name: "cn", realm: realmCN, wantBase: "https://www.workbuddy.cn", wantOrigin: "https://www.workbuddy.cn"},
+		{name: "非法回落 cn", realm: "foo", wantBase: "https://www.workbuddy.cn", wantOrigin: "https://www.workbuddy.cn"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

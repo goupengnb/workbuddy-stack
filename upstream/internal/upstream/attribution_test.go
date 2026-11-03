@@ -50,7 +50,7 @@ func TestAgentPurposeHeadersSet(t *testing.T) {
 		{"X-Agent-Purpose", "conversation"},
 		{"X-Agent-Intent", "craft"},
 		{"X-Agent-Type", "main"},
-		{"X-Private-Data", "true"},
+		{"X-Private-Data", "false"}, // 国内个人号：DefaultModelOptimizationOff=false
 		{"X-IDE-Name", "WorkBuddy"},
 		{"X-IDE-Type", "WorkBuddy"},
 		{"X-Product", "SaaS"},
@@ -84,8 +84,8 @@ func TestAttributionIncludesIDEVersion(t *testing.T) {
 	// X-IDE-Version 缺省（client_version 空）= 内置默认 5.5.4，且四头齐全。
 	c2 := &Client{ClientName: "WorkBuddy"}
 	h2 := chatHeadersReq(t, c2, a, "")
-	if got := h2.Get("X-IDE-Version"); got != "5.5.4" {
-		t.Errorf("X-IDE-Version = %q want %q (default)", got, "5.5.4")
+	if got := h2.Get("X-IDE-Version"); got != "5.9.3" {
+		t.Errorf("X-IDE-Version = %q want %q (default)", got, "5.9.3")
 	}
 	// 显式 ClientName="SaaS" 时 X-IDE-Version 不设（还原旧行为：只有 X-Product=SaaS）。
 	c3 := &Client{ClientName: "SaaS"}
@@ -105,11 +105,11 @@ func TestProductDefaultWorkBuddyFingerprint(t *testing.T) {
 		"X-Product":       "SaaS",
 		"X-IDE-Name":      "WorkBuddy",
 		"X-IDE-Type":      "WorkBuddy",
-		"X-IDE-Version":   "5.5.4",
+		"X-IDE-Version":   "5.9.3",
 		"X-Agent-Intent":  "craft",
 		"X-Agent-Purpose": "conversation",
 		"X-Agent-Type":    "main",
-		"X-Private-Data":  "true",
+		"X-Private-Data":  "false",
 	} {
 		if got := h.Get(hdr); got != want {
 			t.Errorf("%s = %q want %q (default fingerprint)", hdr, got, want)

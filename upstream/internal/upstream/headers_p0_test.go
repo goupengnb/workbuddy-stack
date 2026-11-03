@@ -13,6 +13,8 @@ func TestCommonHeadersCodeBuddyRequest(t *testing.T) {
 	a := &auth.Auth{AccessToken: "at", UID: "u1"}
 	c := &Client{}
 
+	// 5.9.3 真机：只有 chat 带 X-CodeBuddy-Request，RPC 族（billing / refresh）
+	// 一条都没有。旧实现放公共层属于「给轻请求多发一个客户端从不发的头」。
 	// chat 路径
 	req := mustRequest(t)
 	c.ChatHeaders(req, a, "", ChatMeta{})
@@ -23,15 +25,15 @@ func TestCommonHeadersCodeBuddyRequest(t *testing.T) {
 	// billing 路径
 	req2 := mustRequest(t)
 	c.BillingHeaders(req2, a)
-	if got := req2.Header.Get("X-CodeBuddy-Request"); got != "1" {
-		t.Errorf("billing X-CodeBuddy-Request = %q want %q", got, "1")
+	if got := req2.Header.Get("X-CodeBuddy-Request"); got != "" {
+		t.Errorf("billing X-CodeBuddy-Request = %q want empty", got)
 	}
 
 	// refresh 路径
 	req3 := mustRequest(t)
 	c.RefreshHeaders(req3, a)
-	if got := req3.Header.Get("X-CodeBuddy-Request"); got != "1" {
-		t.Errorf("refresh X-CodeBuddy-Request = %q want %q", got, "1")
+	if got := req3.Header.Get("X-CodeBuddy-Request"); got != "" {
+		t.Errorf("refresh X-CodeBuddy-Request = %q want empty", got)
 	}
 }
 
@@ -53,34 +55,35 @@ func TestRefreshHeadersAuthRefreshSource(t *testing.T) {
 func TestCommonHeadersAcceptLanguageByRealm(t *testing.T) {
 	c := &Client{}
 
-	// CN 账号 chat
+	// 5.9.3 真机：RPC 层（chat / refresh）一律不发 Accept-Language。
+	// 该头只出现在浏览器语义的 web 层，由 Chromium 自动带。
 	cnA := &auth.Auth{AccessToken: "at", UID: "c1"}
 	req := mustRequest(t)
 	c.ChatHeaders(req, cnA, "", ChatMeta{})
-	if got := req.Header.Get("Accept-Language"); got != "zh-CN" {
-		t.Errorf("CN chat Accept-Language = %q want %q", got, "zh-CN")
+	if got := req.Header.Get("Accept-Language"); got != "" {
+		t.Errorf("CN chat Accept-Language = %q want empty (RPC 层不发)", got)
 	}
 
 	// global 账号 chat
 	glA := &auth.Auth{AccessToken: "at", UID: "g1", Domain: "www.workbuddy.ai"}
 	req2 := mustRequest(t)
 	c.ChatHeaders(req2, glA, "", ChatMeta{})
-	if got := req2.Header.Get("Accept-Language"); got != "en-US" {
-		t.Errorf("global chat Accept-Language = %q want %q", got, "en-US")
+	if got := req2.Header.Get("Accept-Language"); got != "" {
+		t.Errorf("global chat Accept-Language = %q want empty", got)
 	}
 
 	// CN 账号 refresh
 	req3 := mustRequest(t)
 	c.RefreshHeaders(req3, cnA)
-	if got := req3.Header.Get("Accept-Language"); got != "zh-CN" {
-		t.Errorf("CN refresh Accept-Language = %q want %q", got, "zh-CN")
+	if got := req3.Header.Get("Accept-Language"); got != "" {
+		t.Errorf("CN refresh Accept-Language = %q want empty", got)
 	}
 
 	// global 账号 refresh
 	req4 := mustRequest(t)
 	c.RefreshHeaders(req4, glA)
-	if got := req4.Header.Get("Accept-Language"); got != "en-US" {
-		t.Errorf("global refresh Accept-Language = %q want %q", got, "en-US")
+	if got := req4.Header.Get("Accept-Language"); got != "" {
+		t.Errorf("global refresh Accept-Language = %q want empty", got)
 	}
 }
 
@@ -91,11 +94,11 @@ func TestAcceptHeaderStreamVsNonStream(t *testing.T) {
 	c := &Client{}
 	a := &auth.Auth{AccessToken: "at", UID: "u1", RefreshToken: "rt"}
 
-	// chat 流式：application/json, text/event-stream
+	// 5.9.3 真机：chat 只声明 application/json，照样收 SSE 流。
 	chatReq := mustRequest(t)
 	c.ChatHeaders(chatReq, a, "", ChatMeta{})
-	if got := chatReq.Header.Get("Accept"); got != "application/json, text/event-stream" {
-		t.Errorf("chat Accept = %q want %q", got, "application/json, text/event-stream")
+	if got := chatReq.Header.Get("Accept"); got != "application/json" {
+		t.Errorf("chat Accept = %q want application/json", got)
 	}
 
 	// billing 非流式：application/json

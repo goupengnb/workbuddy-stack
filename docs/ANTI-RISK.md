@@ -24,24 +24,45 @@
 
 chat（`/v2/chat/completions`）当前发送：
 
-- `User-Agent: WorkBuddy/<client_version> WorkBuddy/<client_version> CLI/<cli_version>`
+- `User-Agent: WorkBuddy/5.9.3 WorkBuddy/5.9.3 CLI/2.165.0`（CN）
 - `X-IDE-Name` / `X-IDE-Type`: `WorkBuddy`，`X-IDE-Version`: client_version
 - `X-Product: SaaS`
 - `X-Agent-Intent: craft`、`X-Agent-Purpose: conversation`、`X-Agent-Type: main`
-- `X-Private-Data: true`
-- `X-Domain: www.codebuddy.cn`（CN）
+- `X-Agent-Runtime: local-agent`
+- `X-Private-Data: false`（CN 个人号；国际版/企业号是 `true`）
+- `X-Domain: www.workbuddy.cn`（CN，取 chat base 的裸主机名）
+- `X-CodeBuddy-Request: 1`（**只有 chat**，RPC 族不发）
+- `X-Requested-With: XMLHttpRequest`（只有 chat）
+- `baggage: buddyId=,buddyName=,codebuddy.session_id=<conv>,codebuddy.conversation_request_id=<req>`
 - 会话头族：`X-Conversation-*`、`X-Request-ID`、`X-Root-Request-ID`、`X-Trace-ID`、B3
 
 **不发送**：`X-Machine-ID`、`X-Session-ID`（这两个只在 billing/反馈域）、
-`X-Device-Token`（没有真实 Turing Shield token 时不伪造）、`X-No-*` 占位头。
+`X-Device-Token`（没有真实 Turing Shield token 时不伪造）、`X-No-*` 占位头、
+`Origin` / `Referer` / `Accept-Language`（桌面端 RPC 层不发这些浏览器头）。
 
 依据：
 
-- 5.8.3/5.8.4 桌面端抓包：对话请求不带 `X-Machine-ID` / `X-Session-ID`，那是反馈
+- 5.9.3 / 5.9.4 桌面端真机抓包：对话请求不带 `X-Machine-ID` / `X-Session-ID`，那是反馈
   上报用的；网关若每请求都带按 uid 恒定的派生值，反而是最明显的网关特征。
 - `X-Product` 官方取值是 `SaaS`，`X-IDE-*` 才是 `WorkBuddy`；旧版 `X-Product:
   WorkBuddy` 是自创组合。
 - 官方桌面端不发 `X-No-Enterprise-Id` / `X-No-Department-Info`，缺省即无企业。
+- CN 侧 chat 与 billing **同打 `www.workbuddy.cn`**；`copilot.tencent.com` 只是
+  NetworkFailover 备选，`codebuddy.cn` 根本不是 Origin。
+- `X-Domain` 必须与本次 chat base 的主机名一致，混合域名本身可判定。
+
+## 2.1 三条身份通道必须同版本
+
+同一个账号的请求来自三处，版本号一旦不一致就等于自曝「这不是一台客户端」：
+
+| 通道 | 位置 | 版本来源 |
+| --- | --- | --- |
+| Go 主进程 chat/billing | `internal/upstream/headers.go` | `defaultClientVersion` / `defaultCliVersion` |
+| Python 任务脚本 | `scripts/task_common.py`、`task_runner.py`、`school_open_day_2026.py` | `CLIENT_UA` / `DESKTOP_UA` |
+| 登录流程 | `cmd/login/main.go` | `clientUA` |
+
+改版本时必须三处同时改。2026-11-03 之前脚本侧还停在 `CLI/2.63.2` 和 `5.5.6`，
+与主进程的 5.9.3 冲突，这是当时最明显的破绽之一。
 
 ## 3. 错误码语义（不要混）
 

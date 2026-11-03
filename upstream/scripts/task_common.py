@@ -33,8 +33,11 @@ def _resolve_auths_dir() -> str:
 
 
 AUTHS = _resolve_auths_dir()
-CHAT_BASE = "https://copilot.tencent.com"   # growth / tasks / buddy / streak / chat
-BILL_BASE = "https://www.codebuddy.cn"      # report / billing
+# 5.9.3 真机：桌面端把 chat 与 billing 全打在 www.workbuddy.cn，没有一条打
+# copilot.tencent.com / codebuddy.cn。脚本与 Go 主进程打同一个域，才不会出现
+# 「同一账号一半请求在这个域、一半在另一个域」的混合形态。
+CHAT_BASE = "https://www.workbuddy.cn"      # growth / tasks / buddy / streak / chat
+BILL_BASE = "https://www.workbuddy.cn"      # report / billing
 
 # growth 域常量（travel.go / report.go 与本次实测对齐）
 PATH_LIST_TASKS     = "/v2/activity/growth/tasks"
@@ -46,7 +49,9 @@ PATH_STREAK         = "/activity/growth/streak"
 PATH_REPORT         = "/v2/report"
 PATH_CHAT           = "/v2/chat/completions"
 
-CLIENT_UA = "CLI/2.63.2 CodeBuddy/2.63.2"
+# 必须与 Go 主进程内置的客户端版本一致——同一个账号在工作台上是一台机器，
+# 不该一会儿报 5.9.3、一会儿报 2.63.2。改版本时两边一起改。
+CLIENT_UA = "WorkBuddy/5.9.3 WorkBuddy/5.9.3 CLI/2.165.0"
 
 
 def load_auth(uid_or_file: str) -> dict:
@@ -99,16 +104,19 @@ def billing_base(auth: dict) -> str:
 
 
 def _headers(auth: dict) -> dict:
+    # 5.9.3 真机：桌面端 RPC 层不发 Origin / Referer / Accept-Language。
+    # 旧脚本给每个任务请求都盖了浏览器痕迹，与 client 形态不符。
     hdr = {"Authorization": "Bearer " + auth["token"],
            "Accept": "application/json",
            "Content-Type": "application/json",
-           "User-Agent": CLIENT_UA,
-           "Origin": "https://www.codebuddy.cn",
-           "Referer": "https://www.codebuddy.cn/"}
+           "User-Agent": CLIENT_UA}
     if auth.get("uid"):
         hdr["X-User-Id"] = auth["uid"]
+    hdr["X-Product"] = "SaaS"
     if auth.get("domain"):
         hdr["X-Domain"] = auth["domain"]
+    else:
+        hdr["X-Domain"] = "www.workbuddy.cn"
     return hdr
 
 

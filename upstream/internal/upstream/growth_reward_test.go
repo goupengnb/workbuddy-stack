@@ -307,7 +307,9 @@ func TestGrowthRedeemSendsBillingHeaders(t *testing.T) {
 	if gotAuth != "Bearer at" {
 		t.Errorf("Authorization=%q want Bearer at", gotAuth)
 	}
-	if gotReq != "1" {
-		t.Errorf("X-CodeBuddy-Request=%q want 1", gotReq)
+	// 5.9.3 真机：X-CodeBuddy-Request 只有 chat 带，growth / billing 这批 RPC
+	// 端点一条都没有。多发一个客户端从不发的头本身就是可判别特征。
+	if gotReq != "" {
+		t.Errorf("X-CodeBuddy-Request=%q want empty (非 chat 链不发)", gotReq)
 	}
 }

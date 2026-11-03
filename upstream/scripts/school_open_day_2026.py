@@ -52,8 +52,8 @@ import task_common as tc  # 仅复用 load_auth / AUTHS 常量，不复用其 _h
 # --------------------------------------------------------------------------
 # 端点常量（接口地址）
 # --------------------------------------------------------------------------
-CLOUD_AGENT = "https://www.codebuddy.cn"          # getCloudAgentEndpoint()
-COPILOT     = "https://copilot.tencent.com"       # growth/chat 域（desktop 上报用）
+CLOUD_AGENT = "https://www.workbuddy.cn"          # getCloudAgentEndpoint()（5.9.3 真机同域）
+COPILOT     = "https://www.workbuddy.cn"          # growth/chat 域（桌面端同域）
 SCHOOL      = CLOUD_AGENT + "/portal/activity/school"
 FRESHMAN    = CLOUD_AGENT + "/portal/activity/freshman"
 TEACHER     = CLOUD_AGENT + "/portal/activity/teacher"
@@ -64,7 +64,8 @@ ACTIVITY_ID = "school_open_day_2026"
 # 小程序由微信注入 UA；桌面上报用桌面 UA
 MP_UA = ("Mozilla/5.0 (Linux; Android 14; MicroMessenger/8.0.49 WeChat/0.8.0 "
          "MiniProgramEnv/android; wkbrowser xweb)")
-DESKTOP_UA = "WorkBuddy/5.5.6 WorkBuddy/5.5.6 CLI/2.137.1"
+# 与 Go 主进程 / task_common 的客户端版本保持一致。
+DESKTOP_UA = "WorkBuddy/5.9.3 WorkBuddy/5.9.3 CLI/2.165.0"
 
 # 任务分类表（task_code -> 处理方式）。mode 语义：
 #   manual  人工环节（学生认证/验证码/审核），--run 一律跳过
@@ -440,9 +441,9 @@ def desktop_fingerprint(auth):
         "userNickname": auth.get("nick", ""),
         "product": "SaaS", "releaseDate": 1789036585355,
         "commit": "5f9692923c93033111c51ad7b003eb80204a9b75",
-        "ideName": "WorkBuddy", "ideType": "WorkBuddy", "ideVersion": "5.5.6",
+        "ideName": "WorkBuddy", "ideType": "WorkBuddy", "ideVersion": "5.9.3",
         "machineId": derive_id(auth, "machine"), "sessionId": derive_id(auth, "session"),
-        "extName": "workbuddy-desktop", "extVersion": "5.5.6",
+        "extName": "workbuddy-desktop", "extVersion": "5.9.3",
         "os": "win32", "arch": "x64", "osVersion": "10.0.26220",
         "cpuCores": 20, "memorySize": 24,
         "timestamp": now, "presentAt": now,
