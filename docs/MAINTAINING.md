@@ -38,6 +38,52 @@ GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o wb2
 
 线上临时验证可以只替换二进制（bind mount 到 `/app/wb2api`），长期以镜像为准。
 
+## 上游改了版本怎么办
+
+反风控的本质是「出站身份与官方客户端一致」。上游一升版，版本号、域名、头集合
+都可能变，不跟就会被判成旧客户端。
+
+所有版本/域名常量集中在**一个文件**：
+
+```
+upstream/internal/upstream/identity.json
+```
+
+Go 主进程（`go:embed`）、Python 任务脚本（运行时读取）、登录流程都从它取。
+只改这一处，三条通道同时生效。
+
+### 每周自动检查
+
+`.github/workflows/identity-watch.yml` 每周一比一次，三方对照：
+
+| 来源 | 用途 |
+| --- | --- |
+| `identity.json` | 当前在用的身份 |
+| npm `@tencent-ai/codebuddy-code` | 官方 CLI 版本 |
+| `misakano7545/workbuddy2api-panel` | 社区真机抓包常量 |
+
+有差异自动开 issue。手动跑：
+
+```sh
+cd upstream
+python scripts/check_identity.py          # 人读
+python scripts/check_identity.py --json   # 机器读，退出码 0=一致 1=有差异 2=失败
+```
+
+### 跟进顺序
+
+1. 先看**头集合**，不要先改版本号。官方常在升版时同时增删请求头，只改版本号会
+   留下「版本新、头旧」的组合，比不升更可疑。
+2. 确认 CN/global 域名是否仍是 `workbuddy.cn` / `workbuddy.ai`。
+3. 改 `identity.json`。
+4. `go test ./...` 与 `python scripts/check_identity.py` 都要过。
+5. 发版前用小号跑一轮真实对话，观察是否出现 11128 或 11140。
+
+### 为什么不自动改
+
+自动改会在「上游已升版、社区还没抓包」的窗口期把网关推到没人验证过的形态。
+宁可滞后几天，也不要拿盲猜的身份去撞风控。
+
 ## 发版
 
 ```sh
