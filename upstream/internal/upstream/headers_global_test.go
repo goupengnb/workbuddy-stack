@@ -10,9 +10,9 @@ import (
 
 // globalUAString global realm 默认出站 UA：第二段 platform 品牌为官方国际版
 // `WorkBuddy AI`（intl 项目逆向证据：WorkBuddy/5.5.2 WorkBuddy AI/5.5.2 CLI/5.5.2），
-// 版本段跟随内置默认（5.9.3 / 2.165.0），只切品牌段：
+// 版本段按 realm 取（CN 5.9.3 / global 5.9.4，见 identity.json），只切品牌段：
 // 国际版第二段是品牌 slug（小写连字符 workbuddy-ai），不是显示名。
-const globalUAString = "WorkBuddy/5.9.3 workbuddy-ai/5.9.3 CLI/2.165.0"
+const globalUAString = "WorkBuddy/5.9.4 workbuddy-ai/5.9.4 CLI/2.165.0"
 
 // TestChatHeadersGlobalRealm global 账号的 chat 请求头对齐 intl 三件套：
 //  1. UA 含 `WorkBuddy AI/<v>` 平台段（非 CN 的 `WorkBuddy/<v>`）；

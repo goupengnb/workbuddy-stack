@@ -65,7 +65,8 @@ ACTIVITY_ID = "school_open_day_2026"
 MP_UA = ("Mozilla/5.0 (Linux; Android 14; MicroMessenger/8.0.49 WeChat/0.8.0 "
          "MiniProgramEnv/android; wkbrowser xweb)")
 # 与 Go 主进程 / task_common 的客户端版本保持一致。
-DESKTOP_UA = "WorkBuddy/5.9.3 WorkBuddy/5.9.3 CLI/2.165.0"
+# 与 Go 主进程同源（identity.json）：改版本只改那一个文件。
+DESKTOP_UA = tc.CLIENT_UA
 
 # 任务分类表（task_code -> 处理方式）。mode 语义：
 #   manual  人工环节（学生认证/验证码/审核），--run 一律跳过
@@ -441,9 +442,9 @@ def desktop_fingerprint(auth):
         "userNickname": auth.get("nick", ""),
         "product": "SaaS", "releaseDate": 1789036585355,
         "commit": "5f9692923c93033111c51ad7b003eb80204a9b75",
-        "ideName": "WorkBuddy", "ideType": "WorkBuddy", "ideVersion": "5.9.3",
+        "ideName": "WorkBuddy", "ideType": "WorkBuddy", "ideVersion": tc.IDEVERSION,
         "machineId": derive_id(auth, "machine"), "sessionId": derive_id(auth, "session"),
-        "extName": "workbuddy-desktop", "extVersion": "5.9.3",
+        "extName": "workbuddy-desktop", "extVersion": tc.IDEVERSION,
         "os": "win32", "arch": "x64", "osVersion": "10.0.26220",
         "cpuCores": 20, "memorySize": 24,
         "timestamp": now, "presentAt": now,

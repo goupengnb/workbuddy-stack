@@ -1,0 +1,12 @@
+{
+  "_comment": "出站客户端身份的唯一真值来源。Go 主进程、Python 任务脚本、登录流程都读这里。改版本只改这一个文件。",
+  "client_version_cn": "5.9.3",
+  "client_version_global": "5.9.4",
+  "cli_version": "2.165.0",
+  "origin_cn": "https://www.workbuddy.cn",
+  "origin_global": "https://www.workbuddy.ai",
+  "private_data_cn_personal": "false",
+  "private_data_global_personal": "true",
+  "source": "misakano7545/workbuddy2api-panel 5.9.3 CN / 5.9.4 intl 真机抓包",
+  "updated": "2026-11-03"
+}

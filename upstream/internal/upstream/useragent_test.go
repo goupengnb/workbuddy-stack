@@ -318,7 +318,7 @@ func TestBillingUA_WhenClientNameSaaS(t *testing.T) {
 	if ua != "" {
 		t.Errorf("billing UA = %q want empty (client_name=SaaS)", ua)
 	}
-	if got := c.billingUA(); got != "" {
+	if got := c.billingUA(nil); got != "" {
 		t.Errorf("billingUA() = %q want empty", got)
 	}
 }

@@ -1,0 +1,61 @@
+# 每周检查官方客户端是否发了新版。
+#
+# 反风控的基础是「出站身份与官方一致」。上游一改版本，你的请求就可能被判定为
+# 旧客户端/非官方客户端。这个工作流每周比对一次，有差异就开 issue。
+#
+# 不自动改 identity.json：版本号往往伴随头集合、域名一起变，必须对着真机抓包
+# 确认后再改，盲升版本号比不升更可疑。
+name: Identity Watch
+
+on:
+  schedule:
+    # 每周一 09:20（UTC 01:20），错开整点
+    - cron: "20 1 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 比对本地身份与上游
+        id: check
+        continue-on-error: true
+        run: python upstream/scripts/check_identity.py --json > /tmp/identity.json
+
+      - name: 打印结果
+        if: always()
+        run: python upstream/scripts/check_identity.py || true
+
+      - name: 有差异时开 issue
+        if: steps.check.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "上游客户端身份变了，需要人工核对后更新 \`upstream/internal/upstream/identity.json\`。"
+            echo
+            echo "检查结果："
+            echo
+            echo '```json'
+            cat /tmp/identity.json
+            echo '```'
+            echo
+            echo "处理顺序（不要只改版本号）："
+            echo "1. 找最新真机抓包，确认头集合是否变化（新增/删除了哪些头）"
+            echo "2. 确认 CN/global 域名是否仍为 workbuddy.cn / workbuddy.ai"
+            echo "3. 改 identity.json 后跑 \`go test ./...\` 与 \`python scripts/check_identity.py\`"
+            echo "4. 发版前用小号跑一轮真实对话"
+          } > /tmp/issue.md
+          gh issue create \
+            --title "上游客户端身份已更新，需核对 identity.json" \
+            --body-file /tmp/issue.md

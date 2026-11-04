@@ -12,24 +12,23 @@ import (
 	"workbuddy2api/internal/session"
 )
 
-const (
-	// defaultClientVersion 出站 WorkBuddy 客户端版本段（UA 的 `WorkBuddy/<ver>` 与
-	// 白名单头组的 X-IDE-Version）。对齐官方 WorkBuddy Desktop 分发包版本
-	// （/tmp/wb-ua-fp/step1-fingerprint.md §1.2：WORKBUDDY_CLIENT_VERSION = 桌面端
-	// package.json version，5.5.4 分发包即 5.5.4）。config upstream.client_version
-	// 可覆盖（空 = 内置默认）。
-	defaultClientVersion = "5.9.3"
-	// defaultCliVersion 出站 UA 中 `CLI/<ver>` 段版本。对齐官方内置 CLI
-	// （step1 §1.4：cli/package.json publishConfig.customPackage version = 2.137.1
-	// → resolveBundledCliUserAgent() 返回 CLI/2.137.1）。config upstream.cli_version
-	// 可覆盖（空 = 内置默认）。
-	defaultCliVersion = "2.165.0"
-
-	// CN 侧 Origin/Referer 一律是 workbuddy.cn（5.9.3 真机 661 条带 Origin 的请求
-	// 里没有一条用 codebuddy.cn；那只是 billing 的 API 主机名）。
-	originRefererCN     = "https://www.workbuddy.cn"
-	originRefererGlobal = "https://www.workbuddy.ai"
+// 版本与域名常量统一由 identity.json 提供（见 identity.go）。
+// 这里保留变量而非常量，是为了让「改版本只改一个 JSON」成为可能——
+// 三条通道（Go 主进程 / Python 脚本 / 登录流程）必须同源。
+var (
+	defaultClientVersion = ""
+	defaultCliVersion    = ""
+	originRefererCN      = ""
+	originRefererGlobal  = ""
 )
+
+func init() {
+	id := loadIdentity()
+	defaultClientVersion = id.ClientVersionCN
+	defaultCliVersion = id.CliVersion
+	originRefererCN = id.OriginCN
+	originRefererGlobal = id.OriginGL
+}
 
 // originRefererFor 按账号 realm 返回 Origin/Referer 基础域：
 // global → https://www.workbuddy.ai；cn（含全局开关未开）→ https://www.codebuddy.cn。
@@ -47,6 +46,15 @@ func (c *Client) clientVersion() string {
 		return c.ClientVersion
 	}
 	return defaultClientVersion
+}
+
+// clientVersionFor 按账号 realm 取版本：CN → 5.9.3，global → 5.9.4。
+// 官方两个发行版版本号本就不同，用同一个值会与真机不符。
+func (c *Client) clientVersionFor(a *auth.Auth) string {
+	if c != nil && c.ClientVersion != "" {
+		return c.ClientVersion
+	}
+	return desktopVersionFor(a != nil && a.IsGlobal())
 }
 
 // cliVersion 生效的 CLI 版本：Client.CliVersion 非空则取之，否则内置默认 defaultCliVersion。
@@ -72,7 +80,8 @@ func (c *Client) defaultWorkBuddyUAFor(a *auth.Auth) string {
 		// 真机 UA 第二段是品牌 slug（小写连字符），不是显示名。
 		platform = "workbuddy-ai"
 	}
-	return "WorkBuddy/" + c.clientVersion() + " " + platform + "/" + c.clientVersion() + " CLI/" + c.cliVersion()
+	v := c.clientVersionFor(a)
+	return "WorkBuddy/" + v + " " + platform + "/" + v + " CLI/" + c.cliVersion()
 }
 
 // userAgent 返回当前出站 UA（客户端出站路径：chat/refresh/FetchModels）。
@@ -92,11 +101,11 @@ func (c *Client) userAgent(a *auth.Auth) string {
 // 为 `WorkBuddy/<pkgVer>`，RestOperations 层的 CLI 扩展段被业务层固化覆盖掉）。
 // 默认（client_name 空）即生效（伪造官方桌面端指纹）；
 // 显式 client_name="SaaS" 则不设 UA（还原旧行为，Go 默认 UA）。
-func (c *Client) billingUA() string {
+func (c *Client) billingUA(a *auth.Auth) string {
 	if c == nil || c.attributionClientName() == "SaaS" {
 		return ""
 	}
-	return "WorkBuddy/" + c.clientVersion()
+	return "WorkBuddy/" + c.clientVersionFor(a)
 }
 
 // resolveDeviceToken 解析本次请求的 X-Device-Token 取值。
@@ -430,7 +439,7 @@ func (c *Client) injectAttribution(req *http.Request, a *auth.Auth) {
 	req.Header.Set("X-Private-Data", privateData)
 	req.Header.Set("X-IDE-Name", name)
 	req.Header.Set("X-IDE-Type", name)
-	req.Header.Set("X-IDE-Version", c.clientVersion())
+	req.Header.Set("X-IDE-Version", c.clientVersionFor(a))
 	req.Header.Set("X-Product", "SaaS")
 }
 
@@ -485,7 +494,7 @@ func (c *Client) BillingHeaders(req *http.Request, a *auth.Auth) {
 	// 5.9.3 真机：RPC 层（billing / checkin / refresh）不发 Accept-Language。
 	if c != nil && c.UserAgent != "" {
 		req.Header.Set("User-Agent", c.UserAgent)
-	} else if ua := c.billingUA(); ua != "" {
+	} else if ua := c.billingUA(a); ua != "" {
 		req.Header.Set("User-Agent", ua)
 	}
 	if a.UID != "" {

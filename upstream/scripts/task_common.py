@@ -4,9 +4,9 @@
 与 probe_active.py 同风格：从 auths/ 读账号凭证，封装 growth 域 / report 域
 请求，供 task_*.py 复用。全部默认 dry-run（写动作由调用脚本显式 --yes 放行）。
 
-端点权威来源（Go 代码实测 + 本次实测确认）：
-  - chat 域（copilot.tencent.com）：growth / tasks / buddy / streak / chat/completions
-  - billing 域（www.codebuddy.cn）：/v2/report
+端点权威来源（5.9.3 真机确认）：
+  - chat 与 billing 同属 www.workbuddy.cn（不做域名分治）
+  - 版本号与域名读 internal/upstream/identity.json，与 Go 主进程同源
   - accept : POST /v2/activity/growth/tasks/accept  {"task_codes":[code]}
   - claim  : POST /activity/growth/tasks/{task_code}/claim  （路径含 code、无 body；
      chat 域 400 时降级 web 域 www.workbuddy.cn 同路径 + x-client-platform: web）
@@ -33,11 +33,28 @@ def _resolve_auths_dir() -> str:
 
 
 AUTHS = _resolve_auths_dir()
-# 5.9.3 真机：桌面端把 chat 与 billing 全打在 www.workbuddy.cn，没有一条打
-# copilot.tencent.com / codebuddy.cn。脚本与 Go 主进程打同一个域，才不会出现
-# 「同一账号一半请求在这个域、一半在另一个域」的混合形态。
-CHAT_BASE = "https://www.workbuddy.cn"      # growth / tasks / buddy / streak / chat
-BILL_BASE = "https://www.workbuddy.cn"      # report / billing
+# 客户端身份的唯一真值来源是 upstream/internal/upstream/identity.json。
+# 这里读同一份文件，保证脚本与 Go 主进程的版本号、域名永远一致——
+# 同一个账号出现两套客户端身份，是比 IP 更硬的关联特征。
+_IDENTITY_FILE = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "internal", "upstream", "identity.json",
+)
+
+
+def _identity() -> dict:
+    try:
+        with open(_IDENTITY_FILE, encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        # 读不到就用内置默认，任务脚本不能因为读配置失败而整批中断
+        return {}
+
+
+_ID = _identity()
+
+CHAT_BASE = (_ID.get("origin_cn") or "https://www.workbuddy.cn")  # growth/chat
+BILL_BASE = CHAT_BASE                                            # report/billing
 
 # growth 域常量（travel.go / report.go 与本次实测对齐）
 PATH_LIST_TASKS     = "/v2/activity/growth/tasks"
@@ -51,7 +68,10 @@ PATH_CHAT           = "/v2/chat/completions"
 
 # 必须与 Go 主进程内置的客户端版本一致——同一个账号在工作台上是一台机器，
 # 不该一会儿报 5.9.3、一会儿报 2.63.2。改版本时两边一起改。
-CLIENT_UA = "WorkBuddy/5.9.3 WorkBuddy/5.9.3 CLI/2.165.0"
+_VER = _ID.get("client_version_cn") or "5.9.3"
+_CLI = _ID.get("cli_version") or "2.165.0"
+IDEVERSION = _VER            # 上报体里的 ideVersion / extVersion / X-IDE-Version
+CLIENT_UA = "WorkBuddy/%s WorkBuddy/%s CLI/%s" % (_VER, _VER, _CLI)
 
 
 def load_auth(uid_or_file: str) -> dict:
@@ -113,10 +133,8 @@ def _headers(auth: dict) -> dict:
     if auth.get("uid"):
         hdr["X-User-Id"] = auth["uid"]
     hdr["X-Product"] = "SaaS"
-    if auth.get("domain"):
-        hdr["X-Domain"] = auth["domain"]
-    else:
-        hdr["X-Domain"] = "www.workbuddy.cn"
+    # X-Domain 必须与实际请求的 base 主机一致；混合域名本身可判定。
+    hdr["X-Domain"] = auth.get("domain") or CHAT_BASE.split("://", 1)[-1]
     return hdr
 
 
